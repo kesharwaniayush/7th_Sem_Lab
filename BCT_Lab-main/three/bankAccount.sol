@@ -1,18 +1,33 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 contract BankAccount {
     mapping(address => uint256) private balances;
 
+    event Deposit(address indexed account, uint256 amount);
+    event Withdraw(address indexed account, uint256 amount);
+
     function deposit() public payable {
-        require(msg.value > 0, "Deposit amount must be greater than zero");
+        require(msg.value > 0, "Deposit amount must be greater than 0");
+
         balances[msg.sender] += msg.value;
+
+        emit Deposit(msg.sender, msg.value);
     }
 
-    function withdraw(uint256 _amount) public {
-        require(_amount <= balances[msg.sender], "Insufficient balance");
-        balances[msg.sender] -= _amount;
-        payable(msg.sender).transfer(_amount);
+    function withdraw(uint256 amount) public {
+        require(amount > 0, "Withdraw amount must be greater than 0");
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+
+        // Update balance before sending ETH
+        balances[msg.sender] -= amount;
+
+        // Send ETH
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+
+        require(success, "ETH transfer failed");
+
+        emit Withdraw(msg.sender, amount);
     }
 
     function getBalance() public view returns (uint256) {
